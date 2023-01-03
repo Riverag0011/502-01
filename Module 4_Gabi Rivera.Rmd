@@ -1,0 +1,324 @@
+---
+title: "Module 4 Assignment"
+author: "Gabi Rivera"
+date: "2022-11-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Data Science Using Python and R: Chapter 13
+
+For the following exercises, work with the clothing_sales_training and clothing_sales_test
+data sets. Use either Python or R to solve each problem.
+
+13. Create a logistic regression model to predict whether or not a customer has a store credit card, based on whether they have a web account and the days between purchases. Obtain the summary of the model.
+
+```{r, message=FALSE}
+library(lattice)
+library(tidyverse)
+```
+Import test and training datasets: 
+```{r}
+cs_train = read.csv("clothing_sales_training.csv", sep = ",")
+cs_test = read.csv("clothing_sales_test.csv", sep = ",")
+```
+Create logistic regression: 
+```{r}
+logreg01 = glm(formula = CC ~ Days + Web, data = cs_train, family = binomial)
+summary(logreg01)
+```
+
+
+14. Are there any variables that should be removed from the model? If so, remove them and rerun the model.
+Both variables will be included because there's no sign of multicollinearity amongst the variables. The z-values have reasonable scores with significantly small p-values less than 0.05 level of significance.
+
+
+15. Write the descriptive form of the logistic regression model using the coefficients obtained from Question 1.
+
+Model for credit score based on web account and days between purchases: 
+ln(CC) = 0.4961706 -0.0037016Days + 1.2536955Web
+
+16. Validate the model using the test data set.
+
+```{r}
+logreg01_test = glm(formula = CC ~ Days + Web, data = cs_test, family = binomial)
+summary(logreg01_test)
+```
+
+
+17. Obtain the predicted values of the response variable for each record in the data set.
+Predicted values of test dataset: 
+```{r}
+cs_test$pred_prob <- predict(object = logreg01, newdata = cs_test, type='response')
+head(cs_test$pred_prob)
+```
+Convert predicted values to binary: 
+```{r}
+cs_test$pred <- (cs_test$pred_prob > 0.5)*1
+head(cs_test$pred)
+```
+
+
+### Data Science Using Python and R: Chapter 9
+
+For the following exercises, work with the bank_marketing_training and the bank_marketing_test data set. Use either Python or R to solve each problem.
+
+
+24. Prepare the data set for neural network modeling, including standardizing the variables.
+Import train and test dataset: 
+```{r}
+bm_train = read.csv("bank_marketing_training", sep = ",")
+bm_test = read.csv("bank_marketing_test", sep = ",")
+```
+Libraries: 
+```{r}
+library(nnet)
+library(NeuralNetTools)
+```
+Convert variables to factors: 
+```{r}
+bm_train$response = as.factor(bm_train$response)
+bm_train$response = as.factor(bm_train$response)
+bm_train$job = as.factor(bm_train$job)
+bm_train$marital = as.factor(bm_train$marital)
+
+bm_test$response = as.factor(bm_test$response)
+bm_test$response = as.factor(bm_test$response)
+bm_test$job = as.factor(bm_test$job)
+bm_test$marital = as.factor(bm_test$marital)
+```
+Total number of response in training dataset: 
+```{r}
+table(bm_train$response)
+```
+Total number of response in test dataset:
+```{r}
+table(bm_test$response)
+```
+
+
+25. Using the training data set, create a neural network model to predict a customer’s Response using whichever predictors you think appropriate. Obtain the predicted responses.
+Neural network model predicting response based on job: 
+```{r}
+nnet01 = nnet(response ~ job + marital,
+               data = bm_train,
+               maxit = 100, # number of iterations
+               size = 25) # number of nodes in the hidden layer
+```
+Predicted train responses: 
+```{r}
+bm_train$pred_prob = predict(object = nnet01, newdata = bm_train)
+bm_train$pred = (bm_train$pred_prob > 0.5)*1
+head(bm_train$pred)
+```
+
+
+26. Plot the neural network.
+
+```{r}
+plotnet(nnet01)
+```
+
+
+27. Evaluate the neural network model using the test data set. Construct a contingency table to compare the actual and predicted values of Response.
+
+Neutral network model against test data: Prediction
+```{r}
+bm_test$pred_prob = predict(object = nnet01, newdata = bm_test)
+bm_test$pred = (bm_test$pred_prob > 0.5)*1
+head(bm_test$pred)
+```
+Contingency table comparing actual against predicted response: 
+```{r}
+t1 = table(bm_test$response, bm_test$pred)
+row.names(t1) = c("Actual: 0", "Actual: 1")
+
+colnames(t1) = c("Predicted: 0", "Predicted: 1")
+t1 = addmargins(A = t1, FUN = list(Total = sum), quiet =TRUE); 
+t1
+```
+
+28. Which baseline model do we compare your neural network model against? Did it outperform the baseline according to accuracy?
+Baseline model: Accuracy (all negative model) = TAN/GT
+```{r}
+round((23885/26874)*100, 2)
+```
+Accuracy of neural network model: Accuracy = (TN+TP) / GT
+```{r}
+NNet = round(((23885+3)/26874), 4)*100
+NNet
+```
+
+Answer: The neural network model performs similarly as the baseline at 88.89% accuracy. 
+
+29. Using the same predictors you used for your neural network model, build models to predict Response using the following algorithms:
+
+a. CART
+```{r}
+library(rpart) 
+library(rpart.plot)
+```
+CART training model: 
+```{r}
+cart01 = rpart(formula = response ~ job + marital, 
+               data = bm_train, method = "class")
+```
+CART prediction: 
+```{r}
+X = data.frame(job = bm_test$job, marital = bm_test$marital)
+predCART = predict(object = cart01, newdata = X, type = "class")
+```
+Contingency table: 
+```{r}
+t2 = table(bm_test$response, predCART)
+row.names(t2) = c("Actual: 0", "Actual: 1")
+
+colnames(t2) = c("Predicted: 0", "Predicted: 1")
+t2 = addmargins(A = t2, FUN = list(Total = sum), quiet =TRUE); 
+t2
+```
+
+b. C5.0
+```{r}
+library(C50)
+```
+C5.0 Training model: 
+```{r}
+C5 = C5.0(formula = response ~ job + marital, 
+           data = bm_train, control = C5.0Control(minCases=75))
+```
+C5.0 prediction: 
+```{r}
+predC5.0 = predict(object = C5, newdata = X)
+```
+Contingency table: 
+```{r}
+t3 = table(bm_test$response, predC5.0)
+row.names(t3) = c("Actual: 0", "Actual: 1")
+
+colnames(t3) = c("Predicted: 0", "Predicted: 1")
+t3 = addmargins(A = t3, FUN = list(Total = sum), quiet =TRUE); 
+t3
+```
+
+c. Naïve Bayes
+```{r}
+library(e1071)
+```
+Naive bayes training model: 
+```{r}
+nb01 = naiveBayes(formula = response ~ job + marital, data = bm_train)
+nb01
+```
+Prediction: 
+```{r}
+ypred = predict(object = nb01, newdata = bm_test)
+```
+Contingency table: 
+```{r}
+t4 = table(bm_test$response, ypred)
+row.names(t4) = c("Actual: 0", "Actual: 1")
+
+colnames(t4) = c("Predicted: 0", "Predicted: 1")
+t4 = addmargins(A = t4, FUN = list(Total = sum), quiet =TRUE); 
+t4
+```
+
+30. Compare the results of your neural network model with the three models from the previous exercise, according to the following criteria. Discuss in detail which model performed best and worst according to each criterion.
+
+a. Accuracy: Accuracy = (TN+TP) / GT
+
+```{r}
+CART_A = round((23886+0) / 26874, 4)*100
+C5.0_A = round((23886+0) / 26874, 4)*100
+Nbayes_A = round((23886+0) / 26874, 4)*100
+```
+
+b. Sensitivity: Recall = TP/TAP
+
+```{r}
+Nnet_R = round((3) / 2988, 4)*100
+CART_R = round((0) / 2988, 4)*100
+C5.0_R = round((0) / 2988, 4)*100
+NBayes_R = round((0) / 2988, 4)*100
+```
+
+c. Specificity: Specificity = TN/TAN
+
+```{r}
+Nnet_S = round((23885) / 23886, 4)*100
+CART_S = round((23886) / 23886, 4)*100
+C5.0_S = round((23886) / 23886, 4)*100
+NBayes_S = round((23886) / 23886, 4)*100
+```
+
+Metric comparison table: 
+```{r}
+Table_c = matrix(c(NNet, Nnet_R, Nnet_S, CART_A, CART_R, CART_S, C5.0_A, C5.0_R, 
+                 C5.0_S, Nbayes_A, NBayes_R, NBayes_S), ncol=4, byrow=FALSE)
+
+colnames(Table_c) = c("NNet", "CART", "C5.0", "NBayes")
+rownames(Table_c) = c('Accuracy', 'Sensitivity', 'Specificity')
+
+Table_c
+```
+
+Answer: All the models are performing relatively similar in terms of accuracy compared to the baseline. There's not much difference between specificity scores at 100% across the models. This suggest that all models are able to capture or predict the entire true negative values. Sensitivity is non-existent across the models with only the neutral network model able to detect 0.10% of true positive values. This suggests that none of the models are able to capture or predict the same proportion of positive values in the dataset. The training dataset will need to be re-balanced to represent each class in the response variable proportionately similar to real world scenario. 
+
+### Data Science Using Python and R: Chapter 6
+
+For Exercises 14–20, work with the adult_ch6_training and adult_ch6_test data sets. Use either Python or R to solve each problem.
+
+19. Use random forests on the training data set to predict income using marital status and capital gains and losses.
+
+```{r}
+library(randomForest)
+```
+
+Prepare and import train and test dataset: 
+```{r}
+a_train = read.csv("adult_ch6_training", sep = ",")
+colnames(a_train)[1] = "maritalStatus"
+a_train$Income = factor(a_train$Income)
+a_train$maritalStatus = factor(a_train$maritalStatus)
+
+a_test = read.csv("adult_ch6_test", sep = ",")
+colnames(a_test)[1] = "maritalStatus"
+a_test$Income = factor(a_test$Income)
+a_test$maritalStatus = factor(a_test$maritalStatus)
+```
+
+Predict income based on marital status and capital gains of train dataset: 
+```{r}
+rf01 = randomForest(formula = Income ~ maritalStatus + Cap_Gains_Losses,data = a_train, ntree = 100, type ="classification")
+a_train$pred = rf01$predicted
+head(a_train)
+```
+
+20. Use random forests using the test data set that utilizes the same target and predictor variables.Does the test data result match the training data result?
+
+Predict income based on marital status and capital gains of test dataset: 
+```{r}
+rf02 = randomForest(formula = Income ~ maritalStatus + Cap_Gains_Losses,data = a_test, ntree = 100, type ="classification")
+a_test$pred = rf02$predicted
+head(a_test)
+```
+Total number of predicted results in the test dataset: 
+```{r}
+table(a_test$pred)
+```
+```{r}
+(426/(5729+426)*100)
+```
+Total number of predicted results in the train dataset: 
+```{r}
+table(a_train$pred)
+```
+```{r}
+(1350/(17411+1350)*100)
+```
+
+Answer: There's relatively the same at 7% percent of >50K predicted using both the training and test dataset. This suggest that the test data result match the train data result as the proportion of >50K and <=50K are the same based on job and marital variables. 
