@@ -1,0 +1,286 @@
+---
+title: "Module-2 Assignment"
+author: "Gabi Rivera"
+date: "2022-11-07"
+output:
+  pdf_document: default
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Data Science Using Python and R: Chapter 4 hands-on analysis
+
+Load Libraries:
+```{r libraries,  message= FALSE}
+library(tidyverse)
+library(skimr)
+```
+
+Import Bank Marketing Training dataset:
+```{r bank data}
+ bm_t = read.csv("bank_marketing_training", header = TRUE, sep = ",")
+```
+
+#### Question 21. What is the strength of each graph? Weakness?
+
+Each graph is showing different perspective. The marital bar graph shows the overall view without the response attribute. The marital with overlayed response provides us with the original distribution and the proportion of responses across the marital statuses. We can clearly see which marital status responded with higher frequency of no and yes compared to each other. The normalized stacked view provides us with the proportion of responses in each marital status. So, we can tell that the proportion of no response across each marital status is relatively the same.
+
+##### a. Bar graph of marital.
+```{r marital}
+ggplot(bm_t, aes(marital)) + geom_bar() + ggtitle("Marital")
+```
+
+
+##### b. Bar graph of marital, with overlay of response.
+```{r marital overlay}
+ggplot(bm_t, aes(marital)) + geom_bar(aes(fill = response)) +  
+  ggtitle("Marital With Response Overlay")
+```
+
+
+##### c. Normalized bar graph of marital, with overlay of response.
+
+```{r marital normalized}
+ggplot(bm_t, aes(marital)) +
+  geom_bar(aes(fill = response), position = 'fill') +
+  ggtitle("Marital With Reponse Overlayed")
+```
+
+
+#### 22. Using the graph from Exercise 21c, describe the relationship between marital and response.
+
+Across each marital statuses, no is the overwhelming response with relatively similar frequency. Only single marital statuses have a slight gain on yes response. But overall, yes and no response are relatively similar across marital status.
+
+#### 23. Do the following with the variables marital and response.
+
+##### a. Build a contingency table, being careful to have the correct variables representing the rows and columns. Report the counts and the column percentages.
+
+Marital and Response contingency table: 
+```{r marital contingency}
+mare = table(bm_t$response, bm_t$marital)
+head(mare)
+```
+
+Count Report:
+```{r total}
+mare_2 = addmargins(A = mare, FUN = list(total = sum), quiet = TRUE)
+head(mare_2)
+```
+
+Column percentage added: 
+```{r column percentage}
+round(prop.table(mare, margin = 2)*100, 2)
+head(mare_2)
+```
+
+##### b. Describe what the contingency table is telling you.
+This contingency table is showing that the highest frequency for divorced status is the no response at 89.79% against the yes response at 10.21%. This is the same for married status which has 90.07% no response against 9.93% yes response. Overall, each marital status has no response as the highest proportion of responses. 
+
+#### 24. Repeat the previous exercise, this time reporting the row percentages. Explain the difference between the interpretation of this table and the previous contingency table.
+For this one, the highest proportion of no response is from the married status at 61.04% and the lowest from unknown at 0.21%. The highest proportion of yes response is from the married status again at 53.82% while the lowest is at 0.23$ unknown status. The previous contingency table calculates the percentage by column of each marital statuses while this contingency table calculates the percentage by row of each responses. 
+
+Row percentage: 
+```{r row percentage}
+round(prop.table(mare, margin = 1)*100, 2)
+head(mare_2)
+```
+
+#### 25. Produce the following graphs. What is the strength of each graph? Weakness?
+Duration histogram provides us with the count distribution of duration. Duration with overlayed response provides us with the original distribution and added proportion of yes and no response across duration. We can tell that no responses are more frequent at the beginning duration as it peaks and the trend goes down. The normalized graph provides the proportion of response at each duration instances. We can more finely say that no responses happen at the beginning duration then yes response seems to gain in proportion as the duration increases.
+
+##### a. Histogram of duration.
+```{r duration}
+ggplot(bm_t, aes(duration)) + geom_histogram(color="black", bins = 50) +
+ggtitle("Duration")
+```
+
+
+##### b. Histogram of duration, with overlay of response.
+
+```{r duration overlay}
+ggplot(bm_t, aes(duration)) + geom_histogram(aes(fill = response),color="black", bins = 50) +
+ggtitle("Duration With Response Overlay")
+```
+
+
+##### c. Normalized histogram of duration, with overlay of response.
+
+```{r duration normalized,warning=FALSE}
+ggplot(bm_t, aes(duration)) + geom_histogram(aes(fill = response), 
+    position = "fill", bins = 50) + ggtitle("Duration With Response Overlay")
+```
+
+
+
+### Data Science Using Python and R: Chapter 6 hands-on analysis
+Libraries:
+```{r lib, message= FALSE}
+library(rpart) 
+library(rpart.plot)
+```
+
+Import adult_ch6 Training dataset:
+```{r adult}
+ ad_t = read.csv("adult_ch6_training", header = TRUE, sep = ",")
+ 
+colnames(ad_t)[1] = "maritalStatus"
+ ad_t$Income = factor(ad_t$Income)
+ ad_t$maritalStatus = factor(ad_t$maritalStatus)
+```
+
+#### 14. Create a CART model using the training data set that predicts income using marital status and capital gains and losses. Visualize the decision tree (that is, provide the decision tree output). Describe the first few splits in the decision tree.
+The top 100% is the root node where all of the data records are subjected against down to each of the internal nodes starting from the first split with 47% married status and 53% to others. It also tells us that 24% of the root node or the dataset population earns less than 50K. If we follow down the married status, the next split is determined by capital gain and losses where 41% earns less than 50K in income and 7% earns greater than 50K. 
+
+Cart Model: Training dataset
+```{r adult cart}
+cart01 = rpart(formula = Income ~ maritalStatus + Cap_Gains_Losses, 
+               data = ad_t, method = "class")
+```
+
+Training Plot: Predicting income using marital and capital gains and losses
+```{r cart plot}
+rpart.plot(cart01, type = 4, extra = 106)
+```
+#### 15. Develop a CART model using the test data set that utilizes the same target and predictor variables. Visualize the decision tree.Compare the decision trees. Does the test data result match the training data result?
+Yes, the test dataset and the training dataset are almost identical. 
+
+Test data: 
+```{r cart test}
+ad_test = read.csv("adult_ch6_test", header = TRUE, sep = ",")
+colnames(ad_test)[1] = "maritalStatus"
+ad_test$Income = factor(ad_test$Income)
+ad_test$maritalStatus = factor(ad_test$maritalStatus)
+```
+
+CART Model: Test dataset
+```{r cart test model}
+cart02 = rpart(formula = Income ~ maritalStatus + Cap_Gains_Losses, 
+               data = ad_test, method = "class")
+```
+
+Test Plot: Predicting income using marital and capital gains and losses
+```{r cart test plot}
+rpart.plot(cart02, type = 4, extra = 106)
+```
+
+#### 16. Use the training data set to build a C5.0 model to predict income using marital status and capital gains and losses. Specify a minimum of 75 cases per terminal node. Visualize the decision tree. Describe the first few splits in the decision tree.
+The root nodes starts with capital gain and lose with split at less than and greater than 0.05. Less than 0.05 gain/losses immediately terminates at leaf node 2 where majority of the population are low income earners. Greater than 0.05 gains/losses leads to node 3 which splits the dataset based on marital status. If married, then the population are split again based on capital gains/losses at node 7. 
+
+Library: 
+```{r libr, message= FALSE}
+library(C50)
+```
+
+C5.0 model: Training dataset
+```{r C5}
+C5 = C5.0(formula = Income ~ maritalStatus + Cap_Gains_Losses, 
+           data = ad_t, control = C5.0Control(minCases=75))
+```
+
+Training Plot: Predicting income using marital and capital gains and losses
+```{r C5 plot}
+plot(C5)
+```
+
+#### 17. How does your C5.0 model compare to the CART model? Describe the similarities and differences. 
+CART model decision tree splits the nodes in two compared to C5.0 which determines an optimal split value instead. So the CART plot looks more balanced compared to the C5.0 plot because it can accommodate multi-branches. In addition to having split nodes, C5.0 model have leaf nodes that shows bars of income attribute with n count compared to a simple summary stat shown in CART leaf nodes. 
+
+
+### Data Science Using Python and R: Chapter 11 hands-on analysis
+
+Import bank datasets:
+```{r bank}
+ bank_train = read.csv("bank_reg_training", header = TRUE, sep = ",")
+ bank_test = read.csv("bank_reg_test", header = TRUE, sep = ",")
+ 
+```
+
+#### 34. Use the training set to run a regression predicting Credit Score, based on Debt‐to‐Income Ratio and Request Amount. Obtain a summary of the model. Do both predictors belong in the model?
+
+Yes, both predictors belong in the model. The Std Error and the t-value of the estimates are all relatively small. Both p-values of the parameters are less than 0.05 alpha which means that the values are statistically significant.
+
+Train regression: Credit score based on Debit-to-income ratio and request amount
+```{r reg}
+model01 = lm(formula = Credit.Score ~ Debt.to.Income.Ratio + 
+               Request.Amount, data = bank_train)
+```
+
+Summary: Training dataset
+```{r reg train}
+summary(model01)
+```
+
+
+#### 35. Validate the model from the previous exercise.
+
+Validate regression: Credit score based on Debit-to-income ratio and request amount
+```{r validate}
+model01_test = lm(formula = Credit.Score ~ Debt.to.Income.Ratio + 
+               Request.Amount, data = bank_test)
+```
+
+Summary: Test dataset
+```{r reg test}
+summary(model01_test)
+```
+
+
+#### 36. Use the regression equation to complete this sentence: “The estimated Credit Score equals….”
+
+Test bank dataset: 
+The estimated Credit score equals 665.5 - 52.1(Debt-to-Income ratio) plus 0.001(Request Amount).
+
+Training bank dataset: 
+The estimated Credit score equals 668.5 - 48.1(Debt-to-Income ratio) plus 0.001(Request Amount).
+
+#### 37. Interpret the coefficient for Debt‐to‐Income Ratio.
+The coefficient for debt-to-income ratio of the training is -48.1 which is relatively close to -52.1 coefficient of the test dataset. Both p-values of the parameters are less than 0.05 alpha which means that the values are statistically significant. 
+
+
+#### 38. Interpret the coefficient for Request Amount.
+The coefficient for request amount of the training and the test dataset are relatively the same at 0.001. Both p-values of the parameters are less than 0.05 alpha which means that the values are statistically significant. 
+
+#### 39. Find and interpret the value of s.
+The residual standard error for the training dataset is 66 while the test dataset has 65.78. Both are relatively the same and they are essentially very small in value meaning that the residual have small variance. 
+
+#### 40. Find and interpret R^2 adj. Comment.
+The adjusted r^2 for the training dataset is 0.02821 while the test dataset has 0.03827. Both are slightly lower than their multiple r^2 counterpart. But even so the results is that the parameters can only explain ~3-4% of the natural variance in the y variable. This is a very low or weak score. 
+
+#### 41. Find MAE(Baseline) and MAE(Regression), and determine whether the regression model outperformed its baseline model.
+MAE of baseline is 48.44 while MAE of regression is 47.79. Since the regression model is lower compared to the baseline, it outperforms the baseline. 
+
+Package: 
+```{r package, message= FALSE}
+library(MLmetrics)
+```
+
+Actual values:
+```{r X_test}
+X_test = data.frame(Debt.to.Income.Ratio = bank_test$Debt.to.Income.Ratio,  
+              Request.Amount= bank_test$Request.Amount)
+```
+
+Predicted values: 
+```{r predict}
+ypred = predict(object = model01, newdata = X_test)
+ytrue = bank_test$Credit.Score
+```
+
+Mean absolute error: Regression 
+```{r MAE}
+MAE(y_pred = ypred, y_true = ytrue)
+```
+
+MAE: baseline
+```{r baseline}
+ymean = mean(bank_train$Credit.Score)
+MAE(y_pred= ymean, y_true = ytrue)
+```
+
+
+
+
