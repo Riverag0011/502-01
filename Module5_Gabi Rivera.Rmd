@@ -1,0 +1,164 @@
+---
+title: "Module5_Gabi Rivera"
+author: "Gabi Rivera"
+date: "2022-11-27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data Science Using Python and R: Chapter 14
+
+For the following exercises, work with the Churn_Training_File data set. Use R to solve
+each problem.
+
+11. Subset the variables VMail Plan, Int’l Plan, CustServ Calls, and Churn into their own data frame. Change CustServ Calls into an ordered factor.
+
+Libraries:
+```{r, warning=FALSE}
+library(skimr)
+library(arules)
+
+```
+Import dataset:
+```{r}
+c_train = read.csv("Churn_Training_File", sep = ",")
+head(c_train)
+```
+Subset VMail Plan, Int’l Plan, CustServ Calls, and Churn:
+```{r}
+min_churn = subset(c_train,
+                    select = c("Churn",
+                               "Intl.Plan",
+                               "VMail.Plan",
+                               "CustServ.Calls"))
+```
+
+Change Customer data type to factor:
+```{r}
+min_churn$CustServ.Calls = as.factor(min_churn$CustServ.Calls)
+skim(min_churn)
+summary(min_churn)
+
+```
+
+12. Create tables for each of the four variables. Include both counts and proportions in each table. Use the tables to discuss the “baseline” distribution of each variable.
+
+Table: Intl.Plan
+```{r}
+t1 =  table(min_churn$Intl.Plan)
+t1
+
+t11 = rbind(t1, round(prop.table(t1), 3))
+colnames(t11) = c("Intl.Plan = no", "Intl.Plan = yes")
+rownames(t11) = c("Count", "Proportion")
+t11
+```
+Table: VMail.Plan
+```{r}
+t2 =  table(min_churn$VMail.Plan)
+t2
+
+t21 = rbind(t2, round(prop.table(t2), 3))
+colnames(t21) = c("VMail.Plan = no", "VMail.Plan = yes")
+rownames(t21) = c("Count", "Proportion")
+t21
+```
+Table: CustServ.Calls
+```{r}
+t3 =  table(min_churn$CustServ.Calls)
+t3
+
+t31 = rbind(t3, round(prop.table(t3), 3))
+colnames(t31) = c("CSC = 0", "CSC = 1", "CSC = 2", "CSC = 3", "CSC = 4", 
+                  "CSC = 5", "CSC = 6", "CSC = 7", "CSC = 8", "CSC = 9")
+rownames(t31) = c("Count", "Proportion")
+t31
+```
+Table: Churn
+```{r}
+t4 =  table(min_churn$Churn)
+t4
+
+t41 = rbind(t4, round(prop.table(t4), 3))
+colnames(t41) <- c("Churn = False", "Churn = True")
+rownames(t41) <- c("Count", "Proportion")
+t41
+```
+Answer: 
+The baseline distribution of Intl.Plan is predominantly no at 90.2% and yes at only 9.8%. 
+The baseline distribution of Vmail.Plan is majority no at 72.3% and yes at 27.7%. 
+The baseline distribution of CustServ.Calls is highest at 1 value with 35.6% and lowest at 0.1% from values 8 & 9. 
+The baseline distribution of Churn is majority false at 85.5% and yes at 14.5%. 
+
+
+13. Obtain the association rules using the settings outlined in Section 14.4.
+Mine association rules: 
+```{r, warning=FALSE}
+all_rules = apriori(data = min_churn, 
+                    parameter = list(supp = 0.01, 
+                                     target = "rules", 
+                                     conf = 0.4, 
+                                     minlen = 2, 
+                                     maxlen = 2))
+```
+Inspect top 5 rules (sorted by lift values):
+```{r}
+inspect(head(all_rules, by = "lift", n = 10))
+```
+Identify which rules have Churn in the antecedent, lhs:
+*To work with lhs, we need our rules to be formatted as a data frame. However, the apriori() algorithm does not return output formatted as a data frame. To convert the format of lhs to a data frame, we use two as() commands.
+```{r}
+all_rules_ant_df = as(as(attr(all_rules, "lhs"),"transactions"), "data.frame")
+head(all_rules_ant_df, 15)
+```
+With isolated antecedents, examine to see which contain either Churn = True or Churn = False.
+```{r}
+a1 = all_rules_ant_df$items == "{Churn=True}"
+a2 = all_rules_ant_df$items == "{Churn=False}"
+non_churn_ant = abs(a1+a2-1)
+non_churn_ant
+```
+
+
+14. Subset the rules from the previous exercise so none of the antecedents contain the Churn variable. Display the rules, sorted by descending lift value. 212 Chapter 14 A SSOCIAT ION RULES
+
+Subset from datagrame all_rules only the rules that have non.churn.ant equal to one. 
+```{r}
+good_rules = all_rules[non_churn_ant == 1]
+```
+Inspect top 5 rules (sorted by lift values):
+```{r}
+inspect(head(good_rules, by = "lift", n = 5))
+```
+Contingency table of Churn and Customer Service Calls:
+```{r}
+t_csc_churn = table(min_churn$Churn, min_churn$CustServ.Calls)
+t_csc_churn
+colnames(t_csc_churn) = c("CSC = 0", "CSC = 1", "CSC = 2", "CSC = 3", "CSC = 4",
+                           "CSC = 5", "CSC = 6", "CSC = 7", "CSC = 8", "CSC = 9")
+rownames(t_csc_churn) <- c("Churn = False", "Churn = True")
+addmargins(A = t_csc_churn, FUN = list(Total = sum), quiet = TRUE)
+```
+
+
+15. Obtain association rules using the confidence difference criterion outlined in Section 14.6.
+
+Apply confidence difference criterion: 
+```{r, warning=FALSE}
+rules_confdiff = apriori(data = min_churn, 
+                         parameter = list(arem = "diff", aval = TRUE, minval = 0.4, 
+                                          supp = 0.01, target = "rules", conf = 0.05, 
+                                          minlen = 2, maxlen = 2))
+```
+Inspect top 5 rules (sorted by lift values):
+```{r}
+inspect(head(rules_confdiff, by = "lift", n = 5))
+```
+
+
+
+
+
