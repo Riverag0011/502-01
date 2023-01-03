@@ -1,0 +1,92 @@
+---
+title: "Module6"
+author: "Gabi Rivera"
+date: "2022-12-04"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data Science Using Python and R: Chapter 10
+
+For the following exercises, work with the white_wine_training and white_wine_test data sets. Use either Python or R to solve each problem.
+
+### 11. Input and standardize both the training and test data sets.
+
+```{r}
+wine_train = read.csv('white_wine_training', sep = ',')
+wine_test = read.csv('white_wine_test', sep = ',')
+
+#Subset predictors: 
+X = subset(wine_train, select = c("alcohol", "sugar"))
+X_test = subset(wine_test, select = c("alcohol", "sugar"))
+
+#Standardize predictors: 
+Xs = as.data.frame(scale(X))
+colnames(Xs) = c("alcohol_z", "sugar_z")
+
+Xs_test = as.data.frame(scale(X_test))
+colnames(Xs_test) = c("alcohol_z", "sugar_z")
+```
+
+### 12. Run k‐means clustering on the training data set, using two clusters.
+
+```{r}
+kmeans01 = kmeans(Xs, centers = 2)
+
+#Save cluster membership of each record as it's own variable
+cluster = as.factor(kmeans01$cluster)
+
+#Description of each cluster
+Cluster1 = Xs[ which(cluster == 1), ]
+Cluster2 = Xs[ which(cluster == 2), ]
+```
+
+### 13. Give the mean of each variable within each cluster and use the means to identify a "Dry wines" and a "Sweet wines" cluster.
+
+```{r}
+#Summary
+summary(Cluster1)
+summary(Cluster2)
+```
+
+Cluster 1 = positive value for Sweet wine
+
+-   Dry wine, means: -0.76
+
+-   Sweet wine, means: 0.96
+
+Cluster 2 = positive value for Dry wine
+
+-   Dry wine, means: 0.49
+
+-   Sweet wine, means: -0.62
+
+### 14. Validate the clustering results by running k‐means clustering on the test data set, using two clusters, and identifying a "Dry wines" and a "Sweet wines" cluster.
+
+```{r}
+#Validate test dataset
+kmeans01_test = kmeans(Xs_test, centers = 2)
+cluster_test = as.factor(kmeans01_test$cluster)
+Cluster1_test = Xs[ which(cluster_test == 1), ]
+Cluster2_test = Xs[ which(cluster_test == 2), ]
+
+summary(Cluster1_test); 
+summary(Cluster2_test)
+```
+
+Cluster 1 = positive value for Sweet wine
+
+-   Dry wine, means: -0.83
+
+-   Sweet wine, means: 0.36
+
+Cluster 2 = positive value for Dry wine
+
+-   Dry wine, means: 0.37
+
+-   Sweet wine, means: -0.19
