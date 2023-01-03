@@ -1,0 +1,519 @@
+---
+title: "Module 3 Assignment"
+author: "Gabi Rivera"
+date: "2022-11-13"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data Science Using Python and R: Chapter 5 Hands-On Analysis
+
+For Exercises 28--34, work with the churn data set.
+
+28. Partition the data set, so that 67% of the records are included in the training data set and 33% are included in the test data set. Use a bar graph to confirm your proportions.
+
+### Python Version
+
+Enable python:
+    ```{r}
+    library("reticulate")
+    ```
+Import Churn in python:
+```{python}
+import pandas as pd
+import numpy as np
+import random
+```
+
+```{python}
+churn = pd.read_csv("churn", sep = ',')
+churn.head()
+```
+Partitioning:
+```{python}
+from sklearn.model_selection import train_test_split
+churn_train, churn_test = train_test_split(churn, test_size =0.33, random_state = 7)
+```
+Confirm partition:
+```{python}
+print('Proportion of churn training instances: ', churn_train.shape[0]/churn.shape[0]*100,
+      '\nProportion of churn test instances: ', churn_test.shape[0]/churn.shape[0]*100)
+```
+
+### R version
+
+Import Churn in R:
+```{r}
+churn_r = read.csv("Churn", header = TRUE, sep = ",")
+```
+Set the seed for random number generator for later use:
+```{r}
+set.seed(7)
+```
+Count of records in dataset:
+```{r}
+n = dim(churn_r)[1]
+```
+Set training records to be included via random number generator (TRUE and FALSE values):
+```{r chrn trn}
+train_ind = runif(n) < 0.67
+```
+Create train and test set partitions using TRUE and FALSE values:
+```{r}
+churn_trn <- churn_r[ train_ind, ]
+churn_tst <- churn_r[ !train_ind, ]
+
+head(churn_trn )
+head(churn_tst)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+29. Identify the total number of records in the training data set and how many records in the training data set have a churn value of true.
+
+### Python Version
+
+Total number of training dataset records:
+```{python}
+print('Original number of records before partitioning: ', churn.shape[0],
+      '\nNumber of records in Churn Training set: ', churn_train.shape[0],
+      '\nNumber of records in Churn Test set: ', churn_test.shape[0])
+```
+Number of records in training dataset that are TRUE for Churn:
+```{python}
+churn_train['Churn'].value_counts()
+```
+```{python}
+ratio = churn_train['Churn'].value_counts()[1] / churn_train.shape[0] * 100
+ratio
+```
+
+
+### R version
+
+Total number of training dataset records:
+```{r}
+table(churn_trn$Churn)
+```
+
+
+30. Use your answers from the previous exercise to calculate how many true churn records you need to resample in order to have 20% of the rebalanced data set have true churn values.
+
+Equation:
+$$ x = \frac{p(records)-rare}{1-p} $$
+### Python version
+
+```{python}
+x = ((0.2*2233) - 320) / (1-0.2)
+round(x, 2)
+```
+
+### R version
+
+```{r}
+a = ((0.2*(1904+317)) - 317) / (1-0.2)
+a
+```
+
+
+31. Perform the rebalancing described in the previous exercise and confirm that 20% of the records in the rebalanced data set have true churn values.
+
+### Python version
+
+Isolate records to resample: 
+```{python}
+from random import sample
+to_resample = churn_train.loc[churn_train['Churn'] ]
+```
+Sample from record of interest: 
+```{python}
+our_resample = to_resample.sample(n = 158, replace = True)
+```
+Rebalance training dataset with 20% of the True churn values: 
+```{python}
+churn_train_rebal = pd.concat([churn_train, our_resample], axis=0)
+```
+Confirm rebalancing results to 20% of the True churn values:
+```{python}
+churn_train_rebal['Churn'].value_counts()
+```
+```{python}
+c = (478/(1913+478))*100
+round(c, 0)
+```
+
+
+### R version
+
+Isolate records to resample: 
+```{r}
+to.resample = which(churn_trn$Churn == "True")
+```
+Randomly sample from record of interest: 
+```{r}
+our.resample = sample(x = to.resample, size = 159, replace = TRUE)
+```
+Select the records whose record numbers from our.resample:
+```{r}
+our.resample <- churn_trn[our.resample, ]
+```
+Add the resampled records back onto our original training data set:
+```{r}
+trn_churn_rebal = rbind(churn_trn, our.resample)
+```
+Confirm rebalancing results to 20% of the True churn values:
+```{r}
+t1 <- table(trn_churn_rebal$Churn)
+ratio <- t1[2] / sum(t1) * 100
+ratio
+```
+```{r}
+t.v1 = table(trn_churn_rebal$Churn)
+t.v2 = rbind(t.v1, round(prop.table(t.v1), 4))
+colnames(t.v2) = c("Churn = False", "Churn = True");
+rownames(t.v2) = c("Count", "Proportion")
+t.v2
+```
+
+
+32. Which baseline model do we use to compare our classification model performance against? To which value does this baseline model assign all predictions? What is the accuracy of this baseline model?
+
+Answer: 
+Baseline model for classification will be used to compare the model performance. So with this, the original churn attribute has about 14% true values with total of 2,233 records and 320 True values. The 14% true values can represent the All Positive Model and 86% false values represent the All Negative Model. In comparison, models developed will have to be better than 86% accuracy threshold of the baseline model to be useful.
+
+
+33. Validate your partition by testing for the difference in mean day minutes for the training set versus the test set.
+*For a numerical variable, use the two‐sample t‐test for the difference in means (Larose et. al., 2019).
+
+### Python version
+Two-sample t-test of mean day minutes from the training set versus test set:
+```{python}
+import scipy.stats as stats
+
+dm_trn = churn_train_rebal[['Day Mins']].copy()
+dm_tst = churn_test[['Day Mins']].copy()
+
+print('md_trn', np.var(dm_trn),'\n' 'md_tst', np.var(dm_tst))
+```
+Usually, ratio of larger sample variance to smaller sample variance assumes equal variance at less than 4:
+```{python}
+V_ratio = (3060/3011)
+V_ratio
+```
+Population have equal variance so proceed with t-test: 
+```{python}
+stats.ttest_ind(a=dm_trn, b=dm_tst, equal_var=True)
+```
+Result: The p-value of 0.52 is higher than significance level of 0.05. This fails to reject the null hypothesis that the two population mean are equal. This suggest that training Days Mins attribute have comparable population mean with the test Days Mins attribute. 
+
+
+### R version
+Two-sample t-test of mean day minutes from the training set versus test set:
+```{r}
+dm_train = subset(trn_churn_rebal, select = "Day.Mins")
+dm_test = subset(churn_tst, select = "Day.Mins")
+  
+  t.test(dm_train, dm_test, var.equal=TRUE)
+```
+Result: The p-value of 0.01 is less than 0.05 alpha which mean we can reject the null hypothesis that both population means are equal. This means that the generated Days Mins training mean and test mean are not comparable. 
+
+
+34. Validate your partition by testing for the difference in proportion of true churn records for the training set versus the test set.
+*For a categorical variable with two classes, use the two‐sample Z‐test for the difference in proportions (Larose et. al., 2019).
+
+### Python version
+```{python}
+from statsmodels.stats.weightstats import ztest as ztest
+
+c_trn = churn_train_rebal[['Churn']].copy()
+c_tst = churn_test[['Churn']].copy()
+
+ztest(c_trn, c_tst, value=0) 
+```
+Result: The p-value of 0.0002 is less than alpha 0.05 this means that churn training and test population are significantly different from each other. 
+
+
+
+## Data Science Using Python and R: Chapter 7 Hands-On Analysis
+
+For the following exercises, work with the adult_ch6_training and adult_ch6_test data sets.
+Use R to solve each problem.
+
+****Python version is done on Jupyter*****
+
+23. Using the training data set, create a C5.0 model (Model 1) to predict a customer’s Income using Marital Status and Capital Gains and Losses. Obtain the predicted responses.
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(caret)
+library(C50)
+
+ad_t = read.csv("adult_ch6_training", header = TRUE, sep = ",")
+colnames(ad_t)[1] = "maritalStatus"
+ad_t$Income = factor(ad_t$Income)
+ad_t$maritalStatus = factor(ad_t$maritalStatus)
+
+C5 = C5.0(Income ~ maritalStatus + Cap_Gains_Losses, data = ad_t)
+```
+
+24. Evaluate Model 1 using the test data set. Construct a contingency table to compare the
+actual and predicted values of Income.
+```{r}
+ad_tst = read.csv("adult_ch6_test", header = TRUE, sep = ",")
+colnames(ad_tst)[1] = "maritalStatus"
+ad_tst$Income = factor(ad_tst$Income)
+ad_tst$maritalStatus = factor(ad_tst$maritalStatus)
+
+
+test.X = subset(x = ad_tst, select = c("maritalStatus","Cap_Gains_Losses"))
+ypred = predict(object = C5, newdata = test.X)
+
+t1 = table(ad_tst$Income, ypred)
+row.names(t1) = c("Actual: 0", "Actual: 1")
+
+colnames(t1) = c("Predicted: 0", "Predicted: 1")
+t1 = addmargins(A = t1, FUN = list(Total = sum), quiet =TRUE); t1
+```
+
+25. For Model 1, recapitulate Table 7.4 from the text, calculating all of the model evaluation measures shown in the table. Call this table the Model Evaluation Table. Leave space for Model 2.
+
+Calculations: 
+```{r}
+A = round((4658+424) / 6155, 3)
+
+Er_r = round((1- A), 3)
+
+Sen = round(424 /1481, 3)
+
+Sp = round(4658 / 4674, 3)
+
+Prec = round(424 / 440, 3)
+
+F1 = round(2*((Prec*Sen)/(Prec+Sen)), 3)
+
+F2 = round(5*((Prec*Sen)/((4*Prec)+Sen)), 3)
+
+F0.5 = round(1.25*((Prec*Sen)/((0.25*Prec)+Sen)), 3)
+
+```
+Model 1 Evaluation Table:
+```{r}
+Table = matrix(c(A, Er_r, Sen, Sp, Prec, F1, F2, F0.5, 
+                 NA, NA, NA, NA, NA, NA, NA, NA), ncol=2, byrow=FALSE)
+
+colnames(Table) = c('M1_Value', "M2_Value")
+rownames(Table) = c('Accuracy', 'Error rate', 'Sensitivity', 'Specificity', 'Precision', 'F1', 'F2', 'F0.5')
+
+Table
+```
+
+
+26. Clearly and completely interpret each of the Model 1 evaluation measures from the Model Evaluation Table.
+Accuracy of the baseline: 
+```{r}
+Accuracy_baseline = round(4674/6155, 3)
+Accuracy_baseline
+```
+
+Compared to 76% accuracy of the baseline, Model 1 is doing pretty well predicting from the observations at 83% and as a result has low error rate of 17%. Precision is high at 96% meaning that Model 1 is precise at getting correct true positive predictions. Recall or sensitivity is low at 30% which means only few true positive predictions are captured compared to the whole population. Specificity is high at 98% meaning that the actual negatives are precisely captured.For the F beta scores, ideally the higher the measured value the better as their weighted on precision and recall. In this case, these are more useful to have as a comparison between models. 
+
+
+27. Create a cost matrix, called the 3x cost matrix, that specifies a false positive is four times as bad as a false negative.
+
+3x Cost Matrix:
+```{r}
+Table2 = matrix(c(0,4,1,0), ncol=2, byrow=TRUE)
+
+colnames(Table2) = c('Predicted: 0', 'Predicted: 1')
+rownames(Table2) = c('Actual: 0', 'Actual: 1')
+
+Table2
+```
+
+28. Using the training data set, build a C5.0 model (Model 2) to predict a customer’s Income using Marital Status and Capital Gains and Losses, using the 3x cost matrix.
+
+```{r}
+cost_C5 = matrix( c(0,1,4,0) , byrow = TRUE, ncol = 2)
+cost_C5
+```
+Rerun training dataset: M2 
+```{r}
+C5_costs = C5.0(Income ~ maritalStatus + Cap_Gains_Losses, data = ad_t, costs = cost_C5)
+```
+
+29. Evaluate your predictions from Model 2 using the actual response values from the test data set. Add Overall Model Cost and Profit per Customer to the Model Evaluation Table. Calculate all the measures from the Model Evaluation Table.
+
+M2 Confusion Matrix:
+```{r}
+ad_tst = read.csv("adult_ch6_test", header = TRUE, sep = ",")
+colnames(ad_tst)[1] = "maritalStatus"
+ad_tst$Income = factor(ad_tst$Income)
+ad_tst$maritalStatus = factor(ad_tst$maritalStatus)
+
+
+test.X = subset(x = ad_tst, select = c("maritalStatus","Cap_Gains_Losses"))
+ypred_c = predict(object = C5_costs, newdata = test.X)
+
+t1c = table(ad_tst$Income, ypred_c)
+row.names(t1c) = c("Actual: 0", "Actual: 1")
+
+colnames(t1c) = c("Predicted: 0", "Predicted: 1")
+t1c = addmargins(A = t1c, FUN = list(Total = sum), quiet =TRUE); t1c
+```
+Metrics calculation:
+```{r}
+A2 = round((4671+415) / 6155, 3)
+
+Er_r2 = round((1- A2), 3)
+
+Sen2 = round(415 /1481, 3)
+
+Sp2 = round(4671 / 4674, 3)
+
+Prec2 = round(415 / 418, 3)
+
+F1b = round(2*((Prec2*Sen2)/(Prec2+Sen2)), 3)
+
+F2b = round(5*((Prec2*Sen2)/((4*Prec2)+Sen2)), 3)
+
+F0.5b = round(1.25*((Prec2*Sen2)/((0.25*Prec2)+Sen2)), 3)
+```
+M1 and M2 Evaluation table:
+```{r}
+Table_c = matrix(c(A, Er_r, Sen, Sp, Prec, F1, F2, F0.5, 
+                 A2, Er_r2, Sen2, Sp2, Prec2, F1b, F2b, F0.5b), ncol=2, byrow=FALSE)
+
+colnames(Table_c) = c('M1_Value', "M2_Value")
+rownames(Table_c) = c('Accuracy', 'Error rate', 'Sensitivity', 'Specificity', 'Precision', 'F1', 'F2', 'F0.5')
+
+Table_c
+```
+
+30. Compare the evaluation measures from Model 1 and Model 2 using the 3x cost matrix. Discuss the strengths and weaknesses of each model.
+ 
+Answer: Accuracy and error rate are the same for both models at 83% accuracy and 17% error rate. Both models are performing well above the baseline accuracy. Precision on getting correct true positive scores is enhanced in Model 2 at 99% compared to Model 1 at 96%. Either way both models are performing well for precision metric. Recall or sensitivity are relatively the same with Model 1 slightly higher than Model 2. The 6% difference between sensitivity in true positive predictions aginast the whole population is not much to make a definitive distinction. This is the same case with specificity at 99.7% for Model 1 and 99.9% for Model 2. Both are performing really well in capturing actual negative scores. Even with the F beta scores, there are not much overall difference that can tip in favor towards one model. Both models are performining relatively the same in my eyes. 
+
+
+
+
+
+## Data Science Using Python and R: Chapter 8 Hands-On Analysis
+
+****Python version is done on Jupyter*****
+
+For the following exercises, work with the framingham_nb_training and framingham_nb_test data sets. Use either Python or R to solve each problem.
+
+31. Run the Naïve Bayes classifier to classify persons as living or dead based on sex and education.
+
+Import datasets: 
+```{r}
+library(skimr)
+library(ggplot2)
+library(gridExtra)
+library(e1071)
+
+fn_train = read.csv("framingham_nb_training.csv", header = TRUE, sep = ",")
+fn_test = read.csv("framingham_nb_test.csv", header = TRUE, sep = ",")
+```
+Contingency table: Death based on education
+```{r}
+ta = table(fn_train$Death, fn_train$Educ)
+colnames(ta) = c("Educ = 1", "Educ = 2", "Educ = 3", "Educ = 4")
+rownames(ta) = c("Death = 0", "Death = 1")
+addmargins(A = ta, FUN = list(Total = sum), quiet = TRUE)
+```
+Contingency table: Death based on sex
+```{r}
+ts = table(fn_train$Death, fn_train$Sex)
+colnames(ts) = c("Sex = 1", "Sex = 2")
+rownames(ts) = c("Death = 0", "Death = 1")
+addmargins(A = ts, FUN = list(Total = sum), quiet = TRUE)
+```
+Plot: Death based on sex and education
+
+```{r}
+plot1 = ggplot(fn_train, aes(Death)) + geom_bar(aes(fill = Educ), position = "fill") + ylab('Proportion') + ggtitle("Death by Education")
+
+plot2 = ggplot(fn_train, aes(Death)) + geom_bar( aes(fill = Sex), position = "fill") +
+ylab("Proportion")+ ggtitle("Death by Sex")
+
+grid.arrange(plot1, plot2, nrow = 1)
+```
+Naive Bayes estimator: 
+```{r}
+nb01 = naiveBayes(formula = Death ~ Sex + Educ, data = fn_train)
+nb01
+```
+
+32. Evaluate the Naïve Bayes model on the framingham_nb_test data set. Display the results in a contingency table. Edit the row and column names of the table to make the table more readable. Include a total row and column.
+
+Predict type of Death: 
+```{r}
+ypred = predict(object = nb01, newdata = fn_test)
+```
+Contingency table: Actual vs Predicted
+```{r}
+t.preds = table(fn_test$Death, ypred)
+rownames(t.preds) = c("Actual: Dead", "Actual: Living")
+colnames(t.preds) = c("Predicted: Dead", "Predicted: Living")
+addmargins(A = t.preds, FUN = list(Total = sum), quiet = TRUE)
+```
+
+33. According to your table in the previous exercise, find the following values for the Naïve Bayes model:
+a. Accuracy
+The Naive Bayes model's accuracy is 57%.
+```{r}
+Accuracy_NB = ((203+370) / 1000) * 100
+Accuracy_NB
+```
+b. Error rate
+The Naive Bayes model's error rate is 43%.
+```{r}
+Error_rate_NB = (100 - Accuracy_NB)
+Error_rate_NB
+```
+
+34. According to your contingency table, find the following values for the Naïve Bayes model:
+a. How often it correctly classifies dead persons.
+The Naive Bayes model correctly classifies dead people 39% of the time. 
+```{r}
+Specificity_NB = (203/ 525)*100
+Specificity_NB
+```
+b. How often it correctly classifies living persons.
+The Naive Bayes model correctly classifies living people 78% of the time. 
+```{r}
+Sensitivity_NB = (370/475)*100
+Sensitivity_NB
+```
+
+
+
+
+
+
+
+
